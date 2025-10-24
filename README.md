@@ -1,5 +1,7 @@
 # Vast.ai Security Hardening
 
+> **Note**: This is an unofficial, community-maintained security tool. It is not affiliated with or endorsed by Vast.ai. Use at your own risk.
+
 A Python script to secure Vast.ai GPU rental hosts by restricting sudo access to only legitimate vast.ai operations.
 
 ---
@@ -158,7 +160,7 @@ Time: 2025-10-23 01:13:45 UTC
 
 ### 3. Crontab Monitoring
 
-Alerts when root's crontab is modified (common persistence mechanism for cryptominers).
+Alerts when root's crontab is modified (common persistence mechanism).
 
 ### 4. Core Dump Limits
 
