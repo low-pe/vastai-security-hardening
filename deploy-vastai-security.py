@@ -198,9 +198,27 @@ CURRENT_HASH=$(sha256sum "$CRONTAB_FILE" | awk '{print $1}')
 if [ -f "$HASH_FILE" ]; then
     STORED_HASH=$(cat "$HASH_FILE")
     if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
-        # Crontab changed!
+        # Crontab changed! Check if it's just timing changes
 
-        if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+        # Extract just the commands (remove timing) from both files for comparison
+        if [ -f "$BACKUP_FILE" ]; then
+            OLD_COMMANDS=$(grep -v '^#' "$BACKUP_FILE" 2>/dev/null | sed 's/^[^ ]* [^ ]* [^ ]* [^ ]* [^ ]* //' | sort)
+            NEW_COMMANDS=$(grep -v '^#' "$CRONTAB_FILE" 2>/dev/null | sed 's/^[^ ]* [^ ]* [^ ]* [^ ]* [^ ]* //' | sort)
+
+            # Check if only timing changed (commands are identical)
+            if [ "$OLD_COMMANDS" = "$NEW_COMMANDS" ] && [ -n "$OLD_COMMANDS" ]; then
+                # Only timing changed - log but don't alert
+                echo "[$(date)] CRONTAB TIMING CHANGED (commands unchanged, skipping alert)" >> /var/log/crontab-changes.log
+                TIMING_ONLY_CHANGE=true
+            else
+                TIMING_ONLY_CHANGE=false
+            fi
+        else
+            TIMING_ONLY_CHANGE=false
+        fi
+
+        # Send Discord alert only if it's not just a timing change
+        if [ "$TIMING_ONLY_CHANGE" = "false" ] && [ -n "$DISCORD_WEBHOOK_URL" ]; then
             CRONTAB_LINES=$(sudo wc -l < "$CRONTAB_FILE" 2>/dev/null || echo "0")
             TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 
@@ -237,8 +255,9 @@ if [ -f "$HASH_FILE" ]; then
             if [ "$HTTP_CODE" != "204" ] && [ "$HTTP_CODE" != "200" ]; then
                 echo "[$(date)] Discord webhook failed (HTTP $HTTP_CODE): $CURL_OUTPUT" >> /var/log/crontab-changes.log
             fi
+
+            echo "[$(date)] CRONTAB CHANGED for vastai_kaalia" >> /var/log/crontab-changes.log
         fi
-        echo "[$(date)] CRONTAB CHANGED for vastai_kaalia" >> /var/log/crontab-changes.log
     fi
 fi
 
