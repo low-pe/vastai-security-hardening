@@ -187,6 +187,7 @@ DISCORD_WEBHOOK_URL="${DISCORD_WEBHOOK_URL}"
 HOSTNAME=$(hostname)
 CRONTAB_FILE="/var/spool/cron/crontabs/root"
 HASH_FILE="/var/tmp/root-crontab.sha256"
+BACKUP_FILE="/var/tmp/root-crontab.backup"
 
 if [ ! -f "$CRONTAB_FILE" ]; then
     exit 0
@@ -198,10 +199,21 @@ if [ -f "$HASH_FILE" ]; then
     STORED_HASH=$(cat "$HASH_FILE")
     if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
         # Crontab changed!
-        CHANGES=$(diff <(echo "$STORED_HASH") <(echo "$CURRENT_HASH") 2>&1 || echo "Hash mismatch")
 
         if [ -n "$DISCORD_WEBHOOK_URL" ]; then
-            CRONTAB_CONTENT=$(sudo cat "$CRONTAB_FILE" | head -20)
+            CRONTAB_LINES=$(sudo wc -l < "$CRONTAB_FILE" 2>/dev/null || echo "0")
+
+            # Get diff if we have a backup
+            if [ -f "$BACKUP_FILE" ]; then
+                # Show what changed: lines added (+) or removed (-)
+                DIFF_OUTPUT=$(diff -u "$BACKUP_FILE" "$CRONTAB_FILE" 2>/dev/null | grep -E '^[+-]' | grep -v '^[+-]{3}' | head -20 | sed ':a;N;$!ba;s/\\n/\\\\n/g' | sed 's/"/\\\\"/g' | sed 's/\\$/\\\\$/g')
+                if [ -z "$DIFF_OUTPUT" ]; then
+                    DIFF_OUTPUT="Unable to determine changes"
+                fi
+            else
+                DIFF_OUTPUT="First monitoring run - no previous backup to compare"
+            fi
+
             curl -s -H "Content-Type: application/json" -X POST -d "{
                 \\"embeds\\": [{
                     \\"title\\": \\"⚠️ Crontab Modified on $HOSTNAME\\",
@@ -210,8 +222,9 @@ if [ -f "$HASH_FILE" ]; then
                     \\"fields\\": [
                         {\\"name\\": \\"Server\\", \\"value\\": \\"$HOSTNAME\\", \\"inline\\": true},
                         {\\"name\\": \\"User\\", \\"value\\": \\"root\\", \\"inline\\": true},
+                        {\\"name\\": \\"Total Lines\\", \\"value\\": \\"$CRONTAB_LINES\\", \\"inline\\": true},
                         {\\"name\\": \\"Time\\", \\"value\\": \\"$(date)\\", \\"inline\\": false},
-                        {\\"name\\": \\"Current Crontab\\", \\"value\\": \\"\\`\\`\\`$CRONTAB_CONTENT\\`\\`\\`\\", \\"inline\\": false}
+                        {\\"name\\": \\"Changes (diff)\\", \\"value\\": \\"$DIFF_OUTPUT\\", \\"inline\\": false}
                     ],
                     \\"footer\\": {\\"text\\": \\"Crontab Monitor\\"},
                     \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\\"
@@ -222,7 +235,9 @@ if [ -f "$HASH_FILE" ]; then
     fi
 fi
 
+# Update hash and backup
 echo "$CURRENT_HASH" > "$HASH_FILE"
+sudo cp "$CRONTAB_FILE" "$BACKUP_FILE" 2>/dev/null
 """
 
 SYSTEMD_SERVICE_TEMPLATE = """[Unit]
