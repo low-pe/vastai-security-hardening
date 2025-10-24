@@ -185,8 +185,8 @@ CRONTAB_MONITOR_SCRIPT = """#!/bin/bash
 # Crontab Change Monitor
 DISCORD_WEBHOOK_URL="${DISCORD_WEBHOOK_URL}"
 HOSTNAME=$(hostname)
-CRONTAB_FILE="/var/spool/cron/crontabs/vastai_kaalia"
-HASH_FILE="/var/tmp/vastai-crontab.sha256"
+CRONTAB_FILE="/var/spool/cron/crontabs/root"
+HASH_FILE="/var/tmp/root-crontab.sha256"
 
 if [ ! -f "$CRONTAB_FILE" ]; then
     exit 0
@@ -205,11 +205,11 @@ if [ -f "$HASH_FILE" ]; then
             curl -s -H "Content-Type: application/json" -X POST -d "{
                 \\"embeds\\": [{
                     \\"title\\": \\"⚠️ Crontab Modified on $HOSTNAME\\",
-                    \\"description\\": \\"vastai_kaalia crontab has been modified\\",
+                    \\"description\\": \\"Root crontab has been modified\\",
                     \\"color\\": 16776960,
                     \\"fields\\": [
                         {\\"name\\": \\"Server\\", \\"value\\": \\"$HOSTNAME\\", \\"inline\\": true},
-                        {\\"name\\": \\"User\\", \\"value\\": \\"vastai_kaalia\\", \\"inline\\": true},
+                        {\\"name\\": \\"User\\", \\"value\\": \\"root\\", \\"inline\\": true},
                         {\\"name\\": \\"Time\\", \\"value\\": \\"$(date)\\", \\"inline\\": false},
                         {\\"name\\": \\"Current Crontab\\", \\"value\\": \\"\\`\\`\\`$CRONTAB_CONTENT\\`\\`\\`\\", \\"inline\\": false}
                     ],
