@@ -184,7 +184,7 @@ Restricts core dump sizes to prevent disk space issues.
 
 1. **Wildcard Paths** - Some rules use wildcards (e.g., `/var/lib/docker/*`) which may allow path traversal for reading files, but not code execution.
 
-2. **Script Updates** - The whitelist includes `systemd-run` for vast.ai script updates from their S3 bucket. This is necessary for platform functionality but could theoretically be exploited if vast.ai's infrastructure were compromised.
+2. **Platform Dependencies** - The whitelist includes commands necessary for vast.ai platform operations, including automated updates. This requires trusting the vast.ai infrastructure.
 
 3. **Not a Complete Solution** - This hardens the system but doesn't eliminate all risks. Vast.ai's architecture fundamentally requires giving renters significant system access.
 

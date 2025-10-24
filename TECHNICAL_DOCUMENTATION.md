@@ -201,7 +201,7 @@ This is an exhaustive list of all commands that `vastai_kaalia` is permitted to 
 https://s3.amazonaws.com/public.vast.ai/kaalia/scripts/update_scripts.sh
 ```
 
-**Security note:** This is a potential attack vector if vast.ai's S3 bucket were compromised, but it's necessary for platform functionality.
+**Security note:** This requires trusting the vast.ai platform infrastructure for automated updates.
 
 ---
 
@@ -429,7 +429,7 @@ This helped identify the complete update workflow and allowed us to whitelist th
 5. **Resource abuse:** Installing packages, modifying system
 
 **What we're NOT protecting against:**
-1. Compromised vast.ai infrastructure (we trust vast.ai's S3 bucket)
+1. Platform infrastructure dependencies (requires trusting vast.ai's update mechanisms)
 2. Kernel exploits (requires kernel-level hardening)
 3. Container escape vulnerabilities
 4. Physical access
@@ -466,20 +466,9 @@ sudo apt-get install -y xmrig
 # Only "apt-get install * tshark" is allowed (specific package)
 ```
 
-### Attack Scenarios NOT Prevented
+### Known Limitations in Practice
 
-**Scenario 1: Compromised Update Script**
-If vast.ai's S3 bucket were compromised:
-```bash
-# This would execute:
-sudo systemd-run --scope --unit=vastai_script_updater sh -c 'wget https://s3.amazonaws.com/public.vast.ai/kaalia/scripts/update_scripts.sh && ...'
-
-# Malicious update_scripts.sh would run as root
-```
-
-**Mitigation:** Monitor vast.ai's security practices, consider implementing hash verification.
-
-**Scenario 2: Path Traversal in Cat**
+**Path Traversal in Cat**
 ```bash
 # Allowed:
 sudo cat /var/lib/docker/../../etc/shadow
