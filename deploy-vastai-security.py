@@ -202,34 +202,41 @@ if [ -f "$HASH_FILE" ]; then
 
         if [ -n "$DISCORD_WEBHOOK_URL" ]; then
             CRONTAB_LINES=$(sudo wc -l < "$CRONTAB_FILE" 2>/dev/null || echo "0")
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 
             # Get diff if we have a backup
             if [ -f "$BACKUP_FILE" ]; then
-                # Show what changed: lines added (+) or removed (-)
-                DIFF_OUTPUT=$(diff -u "$BACKUP_FILE" "$CRONTAB_FILE" 2>/dev/null | grep -E '^[+-]' | grep -v '^[+-]{3}' | head -20 | sed ':a;N;$!ba;s/\\n/\\\\n/g' | sed 's/"/\\\\"/g' | sed 's/\\$/\\\\$/g')
+                DIFF_OUTPUT=$(diff -u "$BACKUP_FILE" "$CRONTAB_FILE" 2>/dev/null | grep -E '^[+-]' | grep -v '^[+-]{3}' | head -10)
                 if [ -z "$DIFF_OUTPUT" ]; then
-                    DIFF_OUTPUT="Unable to determine changes"
+                    DIFF_OUTPUT="No changes detected"
                 fi
             else
-                DIFF_OUTPUT="First monitoring run - no previous backup to compare"
+                DIFF_OUTPUT="First run - no previous backup"
             fi
 
-            curl -s -H "Content-Type: application/json" -X POST -d "{
-                \\"embeds\\": [{
-                    \\"title\\": \\"⚠️ Crontab Modified on $HOSTNAME\\",
-                    \\"description\\": \\"Root crontab has been modified\\",
-                    \\"color\\": 16776960,
-                    \\"fields\\": [
-                        {\\"name\\": \\"Server\\", \\"value\\": \\"$HOSTNAME\\", \\"inline\\": true},
-                        {\\"name\\": \\"User\\", \\"value\\": \\"root\\", \\"inline\\": true},
-                        {\\"name\\": \\"Total Lines\\", \\"value\\": \\"$CRONTAB_LINES\\", \\"inline\\": true},
-                        {\\"name\\": \\"Time\\", \\"value\\": \\"$(date)\\", \\"inline\\": false},
-                        {\\"name\\": \\"Changes (diff)\\", \\"value\\": \\"$DIFF_OUTPUT\\", \\"inline\\": false}
+            # Use Python to create properly escaped JSON
+            JSON_PAYLOAD=$(python3 -c "import json; print(json.dumps({
+                'embeds': [{
+                    'title': '⚠️ Crontab Modified on $HOSTNAME',
+                    'description': 'Root crontab has been modified',
+                    'color': 16776960,
+                    'fields': [
+                        {'name': 'Server', 'value': '$HOSTNAME', 'inline': True},
+                        {'name': 'User', 'value': 'root', 'inline': True},
+                        {'name': 'Lines', 'value': '$CRONTAB_LINES', 'inline': True},
+                        {'name': 'Changes', 'value': '''$DIFF_OUTPUT''', 'inline': False}
                     ],
-                    \\"footer\\": {\\"text\\": \\"Crontab Monitor\\"},
-                    \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\\"
+                    'footer': {'text': 'Crontab Monitor'},
+                    'timestamp': '$TIMESTAMP'
                 }]
-            }" "$DISCORD_WEBHOOK_URL" >/dev/null 2>&1
+            }))")
+
+            CURL_OUTPUT=$(curl -s -w "\\nHTTP_CODE:%{http_code}" -H "Content-Type: application/json" -X POST -d "$JSON_PAYLOAD" "$DISCORD_WEBHOOK_URL" 2>&1)
+
+            HTTP_CODE=$(echo "$CURL_OUTPUT" | grep "HTTP_CODE:" | sed 's/HTTP_CODE://')
+            if [ "$HTTP_CODE" != "204" ] && [ "$HTTP_CODE" != "200" ]; then
+                echo "[$(date)] Discord webhook failed (HTTP $HTTP_CODE): $CURL_OUTPUT" >> /var/log/crontab-changes.log
+            fi
         fi
         echo "[$(date)] CRONTAB CHANGED for vastai_kaalia" >> /var/log/crontab-changes.log
     fi
