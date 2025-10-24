@@ -462,8 +462,10 @@ def deploy_crontab_monitoring(server, webhook_url, dry_run=False):
         run_ssh(server, "sudo systemctl enable crontab-monitor.timer", "Enabling timer")
         run_ssh(server, "sudo systemctl start crontab-monitor.timer", "Starting timer")
 
-        # Initialize hash
-        run_ssh(server, "sudo /usr/local/bin/crontab-monitor.sh", "Initializing hash")
+        # Initialize hash file directly (so future changes trigger alerts)
+        run_ssh(server,
+                "sudo sh -c 'if [ -f /var/spool/cron/crontabs/root ]; then sha256sum /var/spool/cron/crontabs/root | awk \"{print \\$1}\" > /var/tmp/root-crontab.sha256; fi'",
+                "Initializing hash")
 
     print("  ✅ Crontab monitoring deployed\n")
     return True
