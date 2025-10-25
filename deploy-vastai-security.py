@@ -83,6 +83,10 @@ vastai_kaalia ALL=(root) NOPASSWD: /usr/bin/tshark *
 vastai_kaalia ALL=(root) NOPASSWD: /usr/bin/apt-get install * tshark
 vastai_kaalia ALL=(root) NOPASSWD: /usr/bin/apt-get install -yq tshark
 
+# Package management (read-only operations)
+vastai_kaalia ALL=(root) NOPASSWD: /usr/bin/apt update
+vastai_kaalia ALL=(root) NOPASSWD: /usr/bin/apt-get update
+
 # SSH daemon
 vastai_kaalia ALL=(root) NOPASSWD: /usr/sbin/sshd -p *
 
