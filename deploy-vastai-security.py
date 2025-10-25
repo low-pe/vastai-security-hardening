@@ -713,6 +713,9 @@ def main():
     parser.add_argument("--restore-permissive", action="store_true",
                         help="Restore permissive sudo access when uninstalling (use with --uninstall)")
 
+    # Update mode
+    parser.add_argument("--update", action="store_true", help="Update script to latest version from GitHub")
+
     # Feature flags
     parser.add_argument("--all", action="store_true", help="Deploy all features")
     parser.add_argument("--interactive", action="store_true", help="Interactive feature selection")
@@ -783,6 +786,47 @@ def main():
 
     # Determine servers (handles both single and comma-separated)
     servers = [s.strip() for s in args.servers.split(",")]
+
+    # Handle update mode
+    if args.update:
+        print("\n" + "="*60)
+        print("Vast.ai Security Script Update")
+        print("="*60 + "\n")
+
+        import urllib.request
+        import os
+
+        GITHUB_RAW_URL = "https://raw.githubusercontent.com/low-pe/vastai-security-hardening/main/deploy-vastai-security.py"
+
+        print("📥 Downloading latest version from GitHub...")
+        try:
+            with urllib.request.urlopen(GITHUB_RAW_URL) as response:
+                new_content = response.read().decode('utf-8')
+
+            # Backup current version
+            script_path = os.path.abspath(__file__)
+            backup_path = f"{script_path}.backup"
+
+            print(f"💾 Backing up current version to {backup_path}")
+            with open(script_path, 'r') as f:
+                current_content = f.read()
+            with open(backup_path, 'w') as f:
+                f.write(current_content)
+
+            # Write new version
+            print(f"✍️  Writing new version to {script_path}")
+            with open(script_path, 'w') as f:
+                f.write(new_content)
+
+            print(f"\n✅ Successfully updated to latest version!")
+            print(f"   Backup saved to: {backup_path}")
+
+        except Exception as e:
+            print(f"\n❌ Update failed: {e}")
+            print(f"   Please download manually from GitHub")
+            sys.exit(1)
+
+        sys.exit(0)
 
     # Determine features - auto-interactive if nothing specified
     feature_flags_provided = any([
