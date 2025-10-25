@@ -777,17 +777,7 @@ def main():
         print()
         return
 
-    # Prompt for webhook if not provided (only for install mode)
-    if not args.webhook:
-        args.webhook = input("Enter Discord webhook URL: ").strip()
-        if not args.webhook:
-            print("Error: No webhook URL specified")
-            sys.exit(1)
-
-    # Determine servers (handles both single and comma-separated)
-    servers = [s.strip() for s in args.servers.split(",")]
-
-    # Handle update mode
+    # Handle update mode BEFORE any prompts
     if args.update:
         print("\n" + "="*60)
         print("Vast.ai Security Script Update")
@@ -827,6 +817,16 @@ def main():
             sys.exit(1)
 
         sys.exit(0)
+
+    # Prompt for webhook if not provided (only for install mode)
+    if not args.webhook:
+        args.webhook = input("Enter Discord webhook URL: ").strip()
+        if not args.webhook:
+            print("Error: No webhook URL specified")
+            sys.exit(1)
+
+    # Determine servers (handles both single and comma-separated)
+    servers = [s.strip() for s in args.servers.split(",")]
 
     # Determine features - auto-interactive if nothing specified
     feature_flags_provided = any([
